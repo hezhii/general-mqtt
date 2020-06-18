@@ -1,0 +1,48 @@
+{
+  "name": "general-mqtt",
+  "version": "1.0.0",
+  "description": "A general mqtt client that can be used in Wechat mini program, web, react native.",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest --config jestconfig.json",
+    "format": "prettier --write src/**/*.ts",
+    "lint": "tslint -p tsconfig.json",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hezhii/general-mqtt.git"
+  },
+  "keywords": [
+    "mqtt",
+    "web",
+    "wechat",
+    "wx",
+    "react-native"
+  ],
+  "author": {
+    "name": "biu",
+    "email": "hezhou920@gmail.com",
+    "url": "https://www.whezh.com"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/hezhii/general-mqtt/issues"
+  },
+  "homepage": "https://github.com/hezhii/general-mqtt#readme",
+  "devDependencies": {
+    "@types/jest": "^26.0.0",
+    "jest": "^26.0.1",
+    "prettier": "^2.0.5",
+    "ts-jest": "^26.1.0",
+    "tslint": "^6.1.2",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^3.8.3"
+  },
+  "files": [
+    "lib/**/*"
+  ]
+}
