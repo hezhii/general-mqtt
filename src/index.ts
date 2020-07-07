@@ -94,7 +94,7 @@ class Connection {
     handlers.push(handler)
   }
 
-  unsubscribe(topic: string, handler: Handler, subscribeOptions: SubscribeOptions = { qos: 0 }) {
+  unsubscribe(topic: string, handler: Handler, subscribeOptions: SubscribeOptions = {}) {
     const handlers = this.topicHandlers[topic]
     if (!handlers) {
       this.client.unsubscribe(topic, subscribeOptions)
@@ -109,10 +109,8 @@ class Connection {
     }
   }
 
-  publish(topic: string, message: string) {
-    const msg = new Message(message)
-    msg.destinationName = topic
-    this.client.publish(msg)
+  publish(topic: string | MqttMessage, payload?: string | Uint8Array, qos?: number, retained?: boolean) {
+    this.client.publish(topic, payload, qos, retained)
   }
 
   /**

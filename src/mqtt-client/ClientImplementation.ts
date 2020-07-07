@@ -36,7 +36,7 @@ type WebSocketClass = new (url: string, protocols?: string | string[]) => WebSoc
 export type SubscribeOptions = {
   onSuccess?: (data: { grantedQos?: number; invocationContext: any }) => void
   onFailure?: (err: FailureData) => void
-  qos: 0 | 1 | 2
+  qos?: 0 | 1 | 2
   timeout?: number
   invocationContext?: any
 }
@@ -376,7 +376,7 @@ class ClientImplementation {
     this._schedule_message(wireMessage)
   }
 
-  send(topic: string | MqttMessage, payload?: string | Uint8Array, qos?: number, retained?: boolean): void {
+  publish(topic: string | MqttMessage, payload?: string | Uint8Array, qos?: number, retained?: boolean): void {
     let message
 
     if (arguments.length === 0) {
@@ -391,8 +391,12 @@ class ClientImplementation {
       // parameter checking in Message object
       message = new Message(payload as string | Uint8Array)
       message.destinationName = topic as string
-      if (arguments.length >= 3) message.qos = qos as number
-      if (arguments.length >= 4) message.retained = retained as boolean
+      if (qos) {
+        message.qos = qos as number
+      }
+      if (retained) {
+        message.retained = retained as boolean
+      }
     }
 
     this.trace('Client.send', message)
@@ -432,14 +436,6 @@ class ClientImplementation {
       } else {
         throw new Error(format(ERROR.INVALID_STATE, ['not connected']))
       }
-    }
-  }
-
-  publish(topic: string | MqttMessage, payload?: string | Uint8Array, qos?: number, retained?: boolean) {
-    try {
-      this.send(topic, payload, qos, retained)
-    } catch (err) {
-      this.trace('Client.publish', err.message)
     }
   }
 
@@ -682,7 +678,6 @@ class ClientImplementation {
   }
 
   private _on_socket_message = (event: any) => {
-    this.trace('Client._on_socket_message', event.data)
     const messages = this._deframeMessages(event.data)
     if (messages && messages.length) {
       for (let i = 0; i < messages.length; i += 1) {
