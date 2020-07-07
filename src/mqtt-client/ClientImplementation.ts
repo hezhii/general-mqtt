@@ -1,5 +1,4 @@
 import { format, decodeMessage, validate } from './utils'
-import packageJson from '../../package.json'
 import { ERROR, MESSAGE_TYPE, CONNACK_RC } from './consts'
 import Message, { MqttMessage } from './Message'
 import Pinger from './Pinger'
@@ -73,7 +72,7 @@ class ClientImplementation {
   private maxMessageIdentifier = 65536
   private _reconnecting = false
   private _reconnectTimeout: NodeJS.Timeout | null = null
-  private _connectTimeout: number | null = null
+  private _connectTimeout: NodeJS.Timeout | null = null
   private _reconnectInterval = 1 // Reconnect Delay, starts at 1 second
   private hostIndex?: number
   private _wsuri: string | null
@@ -88,9 +87,6 @@ class ClientImplementation {
     }
     if (!storage && !(global && global.localStorage)) {
       throw new Error(format(ERROR.UNSUPPORTED, ['localStorage']))
-    }
-    if (!('ArrayBuffer' in global && global.ArrayBuffer !== null)) {
-      throw new Error(format(ERROR.UNSUPPORTED, ['ArrayBuffer']))
     }
 
     let clientIdLength = 0
@@ -167,6 +163,9 @@ class ClientImplementation {
     })
     // If no keep alive interval is set, assume 60 seconds.
     if (connectOptions.keepAliveInterval === undefined) connectOptions.keepAliveInterval = 60
+
+    // If no keep alive timeout is set, assume 5 seconds.
+    if (connectOptions.timeout === undefined) connectOptions.timeout = 10
 
     if (connectOptions.mqttVersion === undefined) {
       connectOptions.mqttVersionExplicit = false
@@ -330,7 +329,7 @@ class ClientImplementation {
           errorCode: ERROR.SUBSCRIBE_TIMEOUT.code,
           errorMessage: format(ERROR.SUBSCRIBE_TIMEOUT),
         })
-      }, subscribeOptions.timeout)
+      }, subscribeOptions.timeout * 1000)
     }
 
     // All subscriptions return a SUBACK.
@@ -369,7 +368,7 @@ class ClientImplementation {
           errorCode: ERROR.UNSUBSCRIBE_TIMEOUT.code,
           errorMessage: format(ERROR.UNSUBSCRIBE_TIMEOUT),
         })
-      }, unsubscribeOptions.timeout)
+      }, unsubscribeOptions.timeout * 1000)
     }
 
     // All unsubscribes return a SUBACK.
@@ -484,7 +483,7 @@ class ClientImplementation {
     if (this._traceBuffer === null) {
       this._traceBuffer = []
     }
-    this.trace('Client.startTrace', new Date(), packageJson.version)
+    this.trace('Client.startTrace', new Date())
   }
 
   stopTrace() {
@@ -629,7 +628,7 @@ class ClientImplementation {
 
     this._connectTimeout = setTimeout(() => {
       this._disconnected(ERROR.CONNECT_TIMEOUT.code, format(ERROR.CONNECT_TIMEOUT))
-    }, this.connectOptions.timeout)
+    }, (this.connectOptions.timeout as number) * 1000)
   }
 
   private _schedule_message(message: WireMessage) {
@@ -671,6 +670,7 @@ class ClientImplementation {
   }
 
   private _on_socket_open = () => {
+    this.trace('_on_socket_open')
     // Create the CONNECT message object.
     const wireMessage = new WireMessage(MESSAGE_TYPE.CONNECT, this.connectOptions)
     wireMessage.clientId = this.clientId
@@ -944,12 +944,14 @@ class ClientImplementation {
   }
 
   private _on_socket_error = (error: any) => {
+    this.trace('_on_socket_error', error)
     if (!this._reconnecting) {
       this._disconnected(ERROR.SOCKET_ERROR.code, format(ERROR.SOCKET_ERROR, [error.data]))
     }
   }
 
   private _on_socket_close = () => {
+    this.trace('_on_socket_close')
     if (!this._reconnecting) {
       this._disconnected(ERROR.SOCKET_CLOSE.code, format(ERROR.SOCKET_CLOSE))
     }
@@ -1035,7 +1037,7 @@ class ClientImplementation {
 
     if (errorCode !== undefined && this._reconnecting) {
       // Continue automatic reconnect process
-      this._reconnectTimeout = setTimeout(this._reconnect, this._reconnectInterval)
+      this._reconnectTimeout = setTimeout(this._reconnect, this._reconnectInterval * 1000)
       return
     }
 

@@ -1,44 +1,41 @@
-import 'miniprogram-api-typings'
-
 type Callback = (data: any) => void
 
 class WXWebSocket {
   binaryType: string | null | undefined
-  private socketTask: WechatMiniprogram.SocketTask
 
   constructor(url: string, protocols?: string | string[]) {
     if (typeof protocols === 'string') {
       protocols = [protocols]
     }
 
-    this.socketTask = wx.connectSocket({
+    wx.connectSocket({
       url,
       protocols,
     })
   }
 
   set onclose(callback: Callback) {
-    this.socketTask.onClose(callback)
+    wx.onSocketClose(callback)
   }
 
   set onerror(callback: Callback) {
-    this.socketTask.onError(callback)
+    wx.onSocketError(callback)
   }
 
   set onmessage(callback: Callback) {
-    this.socketTask.onMessage(callback)
+    wx.onSocketMessage(callback)
   }
 
   set onopen(callback: Callback) {
-    this.socketTask.onOpen(callback)
+    wx.onSocketOpen(callback)
   }
 
   send(data: string | ArrayBuffer) {
-    this.socketTask.send({ data })
+    wx.sendSocketMessage({ data })
   }
 
   close(code?: number, reason?: string): void {
-    this.socketTask.close({
+    wx.closeSocket({
       code,
       reason,
     })

@@ -5,29 +5,16 @@ import WXWebSocket from './WXWebSocket'
 
 type Handler = (topic: string, payloadString: string) => void
 
-const EVENT_TYPES = {
-  connected: 'connected',
-  fail: 'fail',
-  closed: 'closed',
-}
-
-interface ConstructorOptions extends ConnectOptions {
+interface ConstructorOptions {
   uri: string
   clientId: string
-  onConnectionLost?: () => void
-  onMessageDelivered?: () => void
-  onMessageArrived?: () => void
-  onConnected?: () => void
-  disconnectedPublishing?: boolean
-  disconnectedBufferSize?: boolean
-  traceFunction?: () => void
-
   env?: 'web' | 'wx' | 'rn'
 }
 
+type CallbackFunction = (data: any) => void
+
 class Connection {
   client: ClientImplementation
-  private options: ConstructorOptions
 
   private topicHandlers: {
     [topic: string]: Handler[]
@@ -37,17 +24,12 @@ class Connection {
   }
 
   constructor(options: ConstructorOptions) {
-    this.options = options
-
     this.topicHandlers = {}
     this.eventListeners = {}
 
-    this._handleMessage = this._handleMessage.bind(this)
-    this._handleClose = this._handleClose.bind(this)
-
     const { env = 'web' } = options
-    let storage = window.localStorage
-    let WebSocketClass: any = window.WebSocket
+    let storage
+    let WebSocketClass
 
     if (env === 'wx') {
       storage = customStorage
@@ -55,21 +37,40 @@ class Connection {
     } else if (env === 'rn') {
       storage = customStorage
       WebSocketClass = global.WebSocket
+    } else {
+      storage = window.localStorage
+      WebSocketClass = window.WebSocket
     }
     this.client = new ClientImplementation(options.uri, options.clientId, storage, WebSocketClass)
+    this.client.onMessageArrived = this._handleMessage
   }
 
-  connect() {
-    this.client.connect({
-      ...this.options,
-      onSuccess: () => {
-        this.fireEvent(EVENT_TYPES.connected)
-      },
-      onFailure: () => {
-        this.fireEvent(EVENT_TYPES.fail)
-        this.connect()
-      },
-    })
+  set onConnectionLost(callback: CallbackFunction) {
+    this.client.onConnectionLost = callback
+  }
+
+  set onMessageDelivered(callback: CallbackFunction) {
+    this.client.onMessageDelivered = callback
+  }
+
+  set onConnected(callback: CallbackFunction) {
+    this.client.onConnected = callback
+  }
+
+  set disconnectedPublishing(disconnectedPublishing: boolean) {
+    this.client.disconnectedPublishing = disconnectedPublishing
+  }
+
+  set disconnectedBufferSize(disconnectedBufferSize: number) {
+    this.client.disconnectedBufferSize = disconnectedBufferSize
+  }
+
+  set traceFunction(callback: CallbackFunction) {
+    this.client.traceFunction = callback
+  }
+
+  connect(options: ConnectOptions) {
+    this.client.connect(options)
   }
 
   disconnect() {
@@ -178,10 +179,6 @@ class Connection {
   private _handleMessage = (payload: MqttMessage) => {
     const { destinationName: resTopic, payloadString } = payload
     ;(this.topicHandlers[resTopic] || []).forEach(callback => callback(resTopic, payloadString))
-  }
-
-  private _handleClose = () => {
-    this.fireEvent(EVENT_TYPES.closed)
   }
 }
 
