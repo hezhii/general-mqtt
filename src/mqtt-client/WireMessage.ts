@@ -56,15 +56,15 @@ class WireMessage {
   requestedQos?: (0 | 1 | 2)[] = []
   cleanSession?: boolean
   keepAliveInterval?: number
-  onDispatched?: Function // 消息成功出去时的回调
-  onSuccess?: Function // 操作成功的回调
-  onFailure?: Function; // 操作失败的回调
+  onDispatched?: () => void // 消息成功出去时的回调
+  onSuccess?: (data: any) => void // 操作成功的回调
+  onFailure?: (data: any) => void; // 操作失败的回调
 
   [key: string]: any
 
   public constructor(type: number, options?: WireMessageOptions) {
     this.type = type
-    for (let name in options) {
+    for (const name in options) {
       if (options.hasOwnProperty(name)) {
         this[name] = options[name]
       }
@@ -164,17 +164,17 @@ class WireMessage {
 
     // Now we can allocate a buffer for the message
 
-    let mbi = encodeMBI(remLength) // Convert the length to MQTT MBI format
+    const mbi = encodeMBI(remLength) // Convert the length to MQTT MBI format
     let pos = mbi.length + 1 // Offset of start of variable header
-    let buffer = new ArrayBuffer(remLength + pos)
-    let byteStream = new Uint8Array(buffer) // view it as a sequence of bytes
+    const buffer = new ArrayBuffer(remLength + pos)
+    const byteStream = new Uint8Array(buffer) // view it as a sequence of bytes
 
-    //Write the fixed header into the buffer
+    // Write the fixed header into the buffer
     byteStream[0] = first
     byteStream.set(mbi, 1)
 
     // If this is a PUBLISH then the variable header starts with a topic
-    if (this.type == MESSAGE_TYPE.PUBLISH)
+    if (this.type === MESSAGE_TYPE.PUBLISH)
       pos = writeString(
         this.payloadMessage && this.payloadMessage.destinationName,
         destinationNameLength,
@@ -182,7 +182,7 @@ class WireMessage {
         pos,
       )
     // If this is a CONNECT then the variable header contains the protocol name/version, flags and keepalive time
-    else if (this.type == MESSAGE_TYPE.CONNECT) {
+    else if (this.type === MESSAGE_TYPE.CONNECT) {
       switch (this.mqttVersion) {
         case 3:
           byteStream.set(MqttProtoIdentifierv3, pos)

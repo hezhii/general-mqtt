@@ -42,6 +42,8 @@ export type SubscribeOptions = {
   invocationContext?: any
 }
 
+type CallbackFunction = (data: any) => void
+
 class ClientImplementation {
   private storage: Storage
   private webSocket: WebSocketClass
@@ -51,13 +53,13 @@ class ClientImplementation {
   socket?: WebSocket | WXWebSocket
   uri: string
   clientId: string
-  onConnectionLost?: Function
-  onMessageDelivered?: Function
-  onMessageArrived?: Function
-  onConnected?: Function
+  onConnectionLost?: CallbackFunction
+  onMessageDelivered?: CallbackFunction
+  onMessageArrived?: CallbackFunction
+  onConnected?: (reconnect: boolean, uri: string | null) => void
   disconnectedPublishing = false
   disconnectedBufferSize = 5000
-  traceFunction?: Function
+  traceFunction?: CallbackFunction
 
   private _localKey: string
   private _traceBuffer: any[] | null = null
@@ -93,7 +95,7 @@ class ClientImplementation {
 
     let clientIdLength = 0
     for (let i = 0; i < clientId.length; i++) {
-      let charCode = clientId.charCodeAt(i)
+      const charCode = clientId.charCodeAt(i)
       if (0xd800 <= charCode && charCode <= 0xdbff) {
         i++ // Surrogate pair.
       }
@@ -177,7 +179,7 @@ class ClientImplementation {
       throw new Error(format(ERROR.INVALID_ARGUMENT, [connectOptions.mqttVersion, 'connectOptions.mqttVersion']))
     }
 
-    //Check that if password is set, so is username
+    // Check that if password is set, so is username
     if (connectOptions.password !== undefined && connectOptions.userName === undefined)
       throw new Error(format(ERROR.INVALID_ARGUMENT, [connectOptions.password, 'connectOptions.password']))
 
@@ -237,10 +239,10 @@ class ClientImplementation {
             throw new Error(
               format(ERROR.INVALID_TYPE, [typeof connectOptions.ports[i], 'connectOptions.ports[' + i + ']']),
             )
-          let host = connectOptions.hosts[i]
-          let port = connectOptions.ports[i]
+          const host = connectOptions.hosts[i]
+          const port = connectOptions.ports[i]
 
-          let ipv6 = host.indexOf(':') !== -1
+          const ipv6 = host.indexOf(':') !== -1
           const uri = 'ws://' + (ipv6 ? '[' + host + ']' : host) + ':' + port + connectOptions.path
           connectOptions.uris.push(uri)
         }
@@ -308,23 +310,16 @@ class ClientImplementation {
     wireMessage.requestedQos = []
     for (let i = 0; i < wireMessage.topics.length; i++) wireMessage.requestedQos[i] = subscribeOptions.qos
 
-    if (subscribeOptions.onSuccess) {
-      const onSuccess = subscribeOptions.onSuccess
-      wireMessage.onSuccess = function (grantedQos: number) {
-        onSuccess({ invocationContext: subscribeOptions.invocationContext, grantedQos: grantedQos })
-      }
-    }
-
-    if (subscribeOptions.onFailure) {
-      const onFailure = subscribeOptions.onFailure
-      wireMessage.onFailure = function (errorCode: number) {
-        onFailure({
-          invocationContext: subscribeOptions.invocationContext,
-          errorCode: errorCode,
-          errorMessage: '' + errorCode,
-        })
-      }
-    }
+    wireMessage.onSuccess = (grantedQos: number) =>
+      subscribeOptions.onSuccess &&
+      subscribeOptions.onSuccess({ invocationContext: subscribeOptions.invocationContext, grantedQos })
+    wireMessage.onFailure = (errorCode: number) =>
+      subscribeOptions.onFailure &&
+      subscribeOptions.onFailure({
+        invocationContext: subscribeOptions.invocationContext,
+        errorCode,
+        errorMessage: '' + errorCode,
+      })
 
     if (subscribeOptions.timeout && subscribeOptions.onFailure) {
       // 订阅超时时长，如果有该参数则设置一个定时器
@@ -362,12 +357,10 @@ class ClientImplementation {
     const wireMessage = new WireMessage(MESSAGE_TYPE.UNSUBSCRIBE)
     wireMessage.topics = filter.constructor === Array ? (filter as string[]) : ([filter] as string[])
 
-    if (unsubscribeOptions.onSuccess) {
-      const onSuccess = unsubscribeOptions.onSuccess
-      wireMessage.callback = function () {
-        onSuccess({ invocationContext: unsubscribeOptions.invocationContext })
-      }
-    }
+    wireMessage.callback = () =>
+      unsubscribeOptions.onSuccess &&
+      unsubscribeOptions.onSuccess({ invocationContext: unsubscribeOptions.invocationContext })
+
     if (unsubscribeOptions.timeout && unsubscribeOptions.onFailure) {
       const onFailure = unsubscribeOptions.onFailure
       wireMessage.timeOut = setTimeout(() => {
@@ -389,18 +382,18 @@ class ClientImplementation {
 
     if (arguments.length === 0) {
       throw new Error('Invalid argument.' + 'length')
-    } else if (arguments.length == 1) {
+    } else if (arguments.length === 1) {
       if (!(topic instanceof Message) && typeof topic !== 'string') throw new Error('Invalid argument:' + typeof topic)
 
-      message = <MqttMessage>topic
+      message = topic as MqttMessage
       if (typeof message.destinationName === 'undefined')
         throw new Error(format(ERROR.INVALID_ARGUMENT, [message.destinationName, 'Message.destinationName']))
     } else {
-      //parameter checking in Message object
-      message = new Message(<string | Uint8Array>payload)
-      message.destinationName = <string>topic
-      if (arguments.length >= 3) message.qos = <number>qos
-      if (arguments.length >= 4) message.retained = <boolean>retained
+      // parameter checking in Message object
+      message = new Message(payload as string | Uint8Array)
+      message.destinationName = topic as string
+      if (arguments.length >= 3) message.qos = qos as number
+      if (arguments.length >= 4) message.retained = retained as boolean
     }
 
     this.trace('Client.send', message)
@@ -424,7 +417,7 @@ class ClientImplementation {
       // Check if reconnecting is in progress and disconnected publish is enabled.
       if (this._reconnecting && this.disconnectedPublishing) {
         // Check the limit which include the "required ACK" messages
-        let messageCount = Object.keys(this._sentMessages).length + this._buffered_msg_queue.length
+        const messageCount = Object.keys(this._sentMessages).length + this._buffered_msg_queue.length
         if (messageCount > this.disconnectedBufferSize) {
           throw new Error(format(ERROR.BUFFER_FULL, [this.disconnectedBufferSize]))
         } else {
@@ -480,8 +473,8 @@ class ClientImplementation {
     if (this._traceBuffer !== null) {
       this.trace('Client.getTraceLog', new Date())
       this.trace('Client.getTraceLog in flight messages', this._sentMessages.length)
-      for (let key in this._sentMessages) this.trace('_sentMessages ', key, this._sentMessages[key])
-      for (let key in this._receivedMessages) this.trace('_receivedMessages ', key, this._receivedMessages[key])
+      for (const key in this._sentMessages) this.trace('_sentMessages ', key, this._sentMessages[key])
+      for (const key in this._receivedMessages) this.trace('_receivedMessages ', key, this._receivedMessages[key])
 
       return this._traceBuffer
     }
@@ -505,7 +498,7 @@ class ClientImplementation {
       traceFunction({ severity: 'Debug', message: args.map((a: any) => JSON.stringify(a)).join('') })
     }
 
-    //buffer style trace
+    // buffer style trace
     if (this._traceBuffer !== null) {
       for (let i = 0, max = args.length; i < max; i++) {
         if (this._traceBuffer.length === this._MAX_TRACE_ENTRIES) {
@@ -521,7 +514,7 @@ class ClientImplementation {
   }
 
   store(prefix: string, wireMessage: WireMessage) {
-    let storedMessage: any = { type: wireMessage.type, messageIdentifier: wireMessage.messageIdentifier, version: 1 }
+    const storedMessage: any = { type: wireMessage.type, messageIdentifier: wireMessage.messageIdentifier, version: 1 }
 
     switch (wireMessage.type) {
       case MESSAGE_TYPE.PUBLISH:
@@ -530,7 +523,7 @@ class ClientImplementation {
         // Convert the payload to a hex string.
         storedMessage.payloadMessage = {}
         let hex = ''
-        let messageBytes = wireMessage.payloadMessage && wireMessage.payloadMessage.payloadBytes
+        const messageBytes = wireMessage.payloadMessage && wireMessage.payloadMessage.payloadBytes
         for (let i = 0; i < messageBytes.length; i++) {
           if (messageBytes[i] <= 0xf) hex = hex + '0' + messageBytes[i].toString(16)
           else hex = hex + messageBytes[i].toString(16)
@@ -616,7 +609,7 @@ class ClientImplementation {
     this._wsuri = wsurl
     this.connected = false
 
-    if (<number>this.connectOptions.mqttVersion < 4) {
+    if ((this.connectOptions.mqttVersion as number) < 4) {
       this.socket = new this.webSocket(wsurl, ['mqttv3.1'])
     } else {
       this.socket = new this.webSocket(wsurl, ['mqtt'])
@@ -627,7 +620,7 @@ class ClientImplementation {
     this.socket.onerror = this._on_socket_error
     this.socket.onclose = this._on_socket_close
 
-    this.sendPinger = new Pinger(this, <number>this.connectOptions.keepAliveInterval)
+    this.sendPinger = new Pinger(this, this.connectOptions.keepAliveInterval as number)
 
     if (this._connectTimeout) {
       clearTimeout(this._connectTimeout)
@@ -649,13 +642,14 @@ class ClientImplementation {
   }
 
   private _process_queue() {
-    let message = null
+    let message = this._msg_queue.pop()
 
     // Send all queued messages down socket connection
-    while ((message = this._msg_queue.pop())) {
+    while (message) {
       this._socket_send(message)
       // Notify listeners that message was successfully sent
-      message.onDispatched && message.onDispatched()
+      if (message.onDispatched) message.onDispatched()
+      message = this._msg_queue.pop()
     }
   }
 
@@ -721,7 +715,7 @@ class ClientImplementation {
       return messages
     } catch (error) {
       const errorStack =
-        error.hasOwnProperty('stack') == 'undefined' ? error.stack.toString() : 'No Error Stack Available'
+        error.hasOwnProperty('stack') === 'undefined' ? error.stack.toString() : 'No Error Stack Available'
       this._disconnected(ERROR.INTERNAL_ERROR.code, format(ERROR.INTERNAL_ERROR, [error.message, errorStack]))
     }
   }
@@ -743,14 +737,14 @@ class ClientImplementation {
 
           // If we have started using clean session then clear up the local state.
           if (this.connectOptions.cleanSession) {
-            for (let key in this._sentMessages) {
+            for (const key in this._sentMessages) {
               const sentMessage = this._sentMessages[key]
               this.storage.removeItem('Sent:' + this._localKey + sentMessage.messageIdentifier)
             }
             this._sentMessages = {}
 
-            for (let key in this._receivedMessages) {
-              let receivedMessage = this._receivedMessages[key]
+            for (const key in this._receivedMessages) {
+              const receivedMessage = this._receivedMessages[key]
               this.storage.removeItem('Received:' + this._localKey + receivedMessage.messageIdentifier)
             }
             this._receivedMessages = {}
@@ -765,8 +759,8 @@ class ClientImplementation {
             this._disconnected(
               ERROR.CONNACK_RETURNCODE.code,
               format(ERROR.CONNACK_RETURNCODE, [
-                <number>wireMessage.returnCode,
-                CONNACK_RC[<number>wireMessage.returnCode],
+                wireMessage.returnCode as number,
+                CONNACK_RC[wireMessage.returnCode as number],
               ]),
             )
             break
@@ -774,29 +768,29 @@ class ClientImplementation {
 
           // Resend messages.
           let sequencedMessages = []
-          for (let msgId in this._sentMessages) {
+          for (const msgId in this._sentMessages) {
             if (this._sentMessages.hasOwnProperty(msgId)) sequencedMessages.push(this._sentMessages[msgId])
           }
 
           // Also schedule qos 0 buffered messages if any
           if (this._buffered_msg_queue.length > 0) {
-            let msg = null
-            while ((msg = this._buffered_msg_queue.pop())) {
+            let msg = this._buffered_msg_queue.pop()
+            while (msg) {
               sequencedMessages.push(msg)
               if (this.onMessageDelivered) {
                 const onMessageDelivered = this.onMessageDelivered
                 wireMessage.onDispatched = () => onMessageDelivered(wireMessage.payloadMessage)
               }
+              msg = this._buffered_msg_queue.pop()
             }
           }
 
           // Sort sentMessages into the original sent order.
-          sequencedMessages = sequencedMessages.sort(function (a, b) {
-            return a.sequence - b.sequence
-          })
+          sequencedMessages = sequencedMessages.sort((a, b) => a.sequence - b.sequence)
+
           for (let i = 0, len = sequencedMessages.length; i < len; i++) {
             const sentMessage = sequencedMessages[i]
-            if (sentMessage.type == MESSAGE_TYPE.PUBLISH && sentMessage.pubRecReceived) {
+            if (sentMessage.type === MESSAGE_TYPE.PUBLISH && sentMessage.pubRecReceived) {
               const pubRelMessage = new WireMessage(MESSAGE_TYPE.PUBREL, {
                 messageIdentifier: sentMessage.messageIdentifier,
               })
@@ -891,7 +885,7 @@ class ClientImplementation {
           if (sentMessage) {
             if (sentMessage.timeOut) sentMessage.timeOut.cancel()
             // This will need to be fixed when we add multiple topic support
-            if (wireMessage.returnCode && (<Uint8Array>wireMessage.returnCode)[0] === 0x80) {
+            if (wireMessage.returnCode && (wireMessage.returnCode as Uint8Array)[0] === 0x80) {
               if (sentMessage.onFailure) {
                 sentMessage.onFailure(wireMessage.returnCode)
               }
@@ -922,7 +916,9 @@ class ClientImplementation {
 
         case MESSAGE_TYPE.PINGRESP:
           /* The sendPinger or receivePinger may have sent a ping, the receivePinger has already been reset. */
-          this.sendPinger && this.sendPinger.reset()
+          if (this.sendPinger) {
+            this.sendPinger.reset()
+          }
           break
 
         case MESSAGE_TYPE.DISCONNECT:
@@ -941,7 +937,7 @@ class ClientImplementation {
       }
     } catch (error) {
       const errorStack =
-        error.hasOwnProperty('stack') == 'undefined' ? error.stack.toString() : 'No Error Stack Available'
+        error.hasOwnProperty('stack') === 'undefined' ? error.stack.toString() : 'No Error Stack Available'
       this._disconnected(ERROR.INTERNAL_ERROR.code, format(ERROR.INTERNAL_ERROR, [error.message, errorStack]))
       return
     }
@@ -960,20 +956,20 @@ class ClientImplementation {
   }
 
   private _socket_send(wireMessage: WireMessage) {
-    if (wireMessage.type == 1) {
+    if (wireMessage.type === 1) {
       const wireMessageMasked = this._traceMask(wireMessage, 'password')
       this.trace('Client._socket_send', wireMessageMasked)
     } else this.trace('Client._socket_send', wireMessage)
 
-    this.socket && this.socket.send(wireMessage.encode())
+    if (this.socket) this.socket.send(wireMessage.encode())
     /* We have proved to the server we are alive. */
-    this.sendPinger && this.sendPinger.reset()
+    if (this.sendPinger) this.sendPinger.reset()
   }
 
   private _receivePublish(wireMessage: WireMessage) {
     if (!wireMessage.payloadMessage) return
 
-    switch (<string | number>wireMessage.payloadMessage.qos) {
+    switch (wireMessage.payloadMessage.qos as string | number) {
       case 'undefined':
       case 0:
         this._receiveMessage(wireMessage)
@@ -1038,12 +1034,12 @@ class ClientImplementation {
     this.trace('Client._disconnected', errorCode, errorText)
 
     if (errorCode !== undefined && this._reconnecting) {
-      //Continue automatic reconnect process
+      // Continue automatic reconnect process
       this._reconnectTimeout = setTimeout(this._reconnect, this._reconnectInterval)
       return
     }
 
-    this.sendPinger && this.sendPinger.cancel()
+    if (this.sendPinger) this.sendPinger.cancel()
 
     if (this._connectTimeout) {
       clearTimeout(this._connectTimeout)
@@ -1080,7 +1076,7 @@ class ClientImplementation {
         // Execute the connectionLostCallback if there is one, and we were connected.
         if (this.onConnectionLost) {
           this.onConnectionLost({
-            errorCode: errorCode,
+            errorCode,
             errorMessage: errorText,
             reconnect: this.connectOptions.reconnect,
             uri: this._wsuri,
@@ -1106,7 +1102,7 @@ class ClientImplementation {
         } else if (this.connectOptions.onFailure) {
           this.connectOptions.onFailure({
             invocationContext: this.connectOptions.invocationContext,
-            errorCode: errorCode,
+            errorCode,
             errorMessage: errorText,
           })
         }
@@ -1115,10 +1111,10 @@ class ClientImplementation {
   }
 
   private _traceMask(traceObject: { [key: string]: any }, masked: string) {
-    let traceObjectMasked: { [key: string]: any } = {}
-    for (let attr in traceObject) {
+    const traceObjectMasked: { [key: string]: any } = {}
+    for (const attr in traceObject) {
       if (traceObject.hasOwnProperty(attr)) {
-        if (attr == masked) traceObjectMasked[attr] = '******'
+        if (attr === masked) traceObjectMasked[attr] = '******'
         else traceObjectMasked[attr] = traceObject[attr]
       }
     }

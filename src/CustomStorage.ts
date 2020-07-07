@@ -56,19 +56,19 @@ class CustomStorage implements Storage {
 const storage = new Proxy(new CustomStorage(), {
   set(target, prop, value) {
     if (CustomStorage.prototype.hasOwnProperty(prop)) {
-      target[<string>prop] = value
+      target[prop as string] = value
     } else {
-      target.setItem(<string>prop, value)
+      target.setItem(prop as string, value)
     }
     return true
   },
 
   get(target, prop) {
     if (CustomStorage.prototype.hasOwnProperty(name)) {
-      return target[<string>prop]
+      return target[prop as string]
     }
     if (valuesMap.has(name)) {
-      return target.getItem(<string>prop)
+      return target.getItem(prop as string)
     }
   },
 })

@@ -1,6 +1,6 @@
 import { ERROR, MqttError, MESSAGE_TYPE } from './consts'
 import WireMessage from './WireMessage'
-import Message, { MqttMessage } from './Message'
+import Message from './Message'
 
 /**
  * Validate an object's parameter names to ensure they
@@ -12,13 +12,13 @@ import Message, { MqttMessage } from './Message'
  * @throws {Error} Invalid option parameter found.
  */
 export function validate(obj: any, keys: any) {
-  for (let key in obj) {
+  for (const key in obj) {
     if (obj.hasOwnProperty(key)) {
       if (keys.hasOwnProperty(key)) {
         if (typeof obj[key] !== keys[key]) throw new Error(format(ERROR.INVALID_TYPE, [typeof obj[key], key]))
       } else {
         let errorStr = 'Unknown property, ' + key + '. Valid properties are:'
-        for (let validKey in keys) if (keys.hasOwnProperty(validKey)) errorStr = errorStr + ' ' + validKey
+        for (const validKey in keys) if (keys.hasOwnProperty(validKey)) errorStr = errorStr + ' ' + validKey
         throw new Error(errorStr)
       }
     }
@@ -34,7 +34,8 @@ export function validate(obj: any, keys: any) {
 export function format(error: MqttError, substitutions?: any) {
   let text = error.text
   if (substitutions) {
-    let field, start
+    let field
+    let start
     for (let i = 0; i < substitutions.length; i++) {
       field = '{' + i + '}'
       start = text.indexOf(field)
@@ -49,10 +50,10 @@ export function format(error: MqttError, substitutions?: any) {
 }
 
 export function decodeMessage(input: Uint8Array, pos: number): [WireMessage | null, number] {
-  let startingPos = pos
+  const startingPos = pos
   let first = input[pos]
-  let type = first >> 4
-  let messageInfo = (first &= 0x0f)
+  const type = first >> 4
+  const messageInfo = (first &= 0x0f)
   pos += 1
 
   // Decode the remaining length (MBI format)
@@ -61,7 +62,7 @@ export function decodeMessage(input: Uint8Array, pos: number): [WireMessage | nu
   let remLength = 0
   let multiplier = 1
   do {
-    if (pos == input.length) {
+    if (pos === input.length) {
       return [null, startingPos]
     }
     digit = input[pos++]
@@ -69,25 +70,25 @@ export function decodeMessage(input: Uint8Array, pos: number): [WireMessage | nu
     multiplier *= 128
   } while ((digit & 0x80) !== 0)
 
-  let endPos = pos + remLength
+  const endPos = pos + remLength
   if (endPos > input.length) {
     return [null, startingPos]
   }
 
-  let wireMessage = new WireMessage(type)
+  const wireMessage = new WireMessage(type)
   switch (type) {
     case MESSAGE_TYPE.CONNACK:
-      let connectAcknowledgeFlags = input[pos++]
+      const connectAcknowledgeFlags = input[pos++]
       if (connectAcknowledgeFlags & 0x01) wireMessage.sessionPresent = true
       wireMessage.returnCode = input[pos++]
       break
 
     case MESSAGE_TYPE.PUBLISH:
-      let qos = (messageInfo >> 1) & 0x03
+      const qos = (messageInfo >> 1) & 0x03
 
-      let len = readUint16(input, pos)
+      const len = readUint16(input, pos)
       pos += 2
-      let topicName = parseUTF8(input, pos, len)
+      const topicName = parseUTF8(input, pos, len)
       pos += len
       // If QoS 1 or 2 there will be a messageIdentifier
       if (qos > 0) {
@@ -95,9 +96,9 @@ export function decodeMessage(input: Uint8Array, pos: number): [WireMessage | nu
         pos += 2
       }
 
-      let message = new Message(input.subarray(pos, endPos))
-      if ((messageInfo & 0x01) == 0x01) message.retained = true
-      if ((messageInfo & 0x08) == 0x08) message.duplicate = true
+      const message = new Message(input.subarray(pos, endPos))
+      if ((messageInfo & 0x01) === 0x01) message.retained = true
+      if ((messageInfo & 0x08) === 0x08) message.duplicate = true
       message.qos = qos
       message.destinationName = topicName
       wireMessage.payloadMessage = message
@@ -128,8 +129,8 @@ export function writeUint16(input: number | undefined, buffer: Uint8Array, offse
   if (!input) {
     return offset
   }
-  buffer[offset++] = input >> 8 //MSB
-  buffer[offset++] = input % 256 //LSB
+  buffer[offset++] = input >> 8 // MSB
+  buffer[offset++] = input % 256 // LSB
   return offset
 }
 
@@ -150,7 +151,7 @@ export function readUint16(buffer: Uint8Array, offset: number) {
  * Encodes an MQTT Multi-Byte Integer
  */
 export function encodeMBI(number: number) {
-  let output = new Array(1)
+  const output = new Array(1)
   let numBytes = 0
 
   do {
@@ -174,7 +175,7 @@ export function UTF8Length(input?: string) {
   }
   let output = 0
   for (let i = 0; i < input.length; i++) {
-    let charCode = input.charCodeAt(i)
+    const charCode = input.charCodeAt(i)
     if (charCode > 0x7ff) {
       // Surrogate pair means its a 4 byte character
       if (0xd800 <= charCode && charCode <= 0xdbff) {
@@ -198,7 +199,7 @@ export function stringToUTF8(input: string, output: Uint8Array, start: number) {
 
     // Check for a surrogate pair.
     if (0xd800 <= charCode && charCode <= 0xdbff) {
-      let lowCharCode = input.charCodeAt(++i)
+      const lowCharCode = input.charCodeAt(++i)
       if (isNaN(lowCharCode)) {
         throw new Error(format(ERROR.MALFORMED_UNICODE, [charCode, lowCharCode]))
       }
@@ -230,23 +231,23 @@ export function parseUTF8(input: Uint8Array, offset: number, length: number) {
   let pos = offset
 
   while (pos < offset + length) {
-    let byte1 = input[pos++]
+    const byte1 = input[pos++]
     if (byte1 < 128) utf16 = byte1
     else {
-      let byte2 = input[pos++] - 128
+      const byte2 = input[pos++] - 128
       if (byte2 < 0) throw new Error(format(ERROR.MALFORMED_UTF, [byte1.toString(16), byte2.toString(16), '']))
       if (byte1 < 0xe0)
         // 2 byte character
         utf16 = 64 * (byte1 - 0xc0) + byte2
       else {
-        let byte3 = input[pos++] - 128
+        const byte3 = input[pos++] - 128
         if (byte3 < 0)
           throw new Error(format(ERROR.MALFORMED_UTF, [byte1.toString(16), byte2.toString(16), byte3.toString(16)]))
         if (byte1 < 0xf0)
           // 3 byte character
           utf16 = 4096 * (byte1 - 0xe0) + 64 * byte2 + byte3
         else {
-          let byte4 = input[pos++] - 128
+          const byte4 = input[pos++] - 128
           if (byte4 < 0)
             throw new Error(
               format(ERROR.MALFORMED_UTF, [

@@ -1,10 +1,15 @@
-import Client, { ConnectOptions, SubscribeOptions } from './mqtt-client/ClientImplementation'
+import ClientImplementation, { ConnectOptions, SubscribeOptions } from './mqtt-client/ClientImplementation'
 import Message, { MqttMessage } from './mqtt-client/Message'
-import ClientImplementation from './mqtt-client/ClientImplementation'
 import customStorage from './CustomStorage'
 import WXWebSocket from './WXWebSocket'
 
 type Handler = (topic: string, payloadString: string) => void
+
+const EVENT_TYPES = {
+  connectSuccess: 'connectSuccess',
+  connectFail: 'connectFail',
+  onClose: 'onClose',
+}
 
 interface ConstructorOptions extends ConnectOptions {
   uri: string
@@ -54,6 +59,19 @@ class Connection {
     this.client = new ClientImplementation(options.uri, options.clientId, storage, WebSocketClass)
   }
 
+  connect() {
+    this.client.connect({
+      ...this.options,
+      onSuccess: () => {
+        this.fireEvent(EVENT_TYPES.connectSuccess)
+      },
+      onFailure: () => {
+        this.fireEvent(EVENT_TYPES.connectFail)
+        this.connect()
+      },
+    })
+  }
+
   disconnect() {
     this.client.disconnect()
   }
@@ -91,7 +109,6 @@ class Connection {
   }
 
   publish(topic: string, message: string) {
-    console.log(`publish:${topic}, message:${message}`)
     const msg = new Message(message)
     msg.destinationName = topic
     this.client.publish(msg)
@@ -108,15 +125,15 @@ class Connection {
   publishWithPromise(topic: string, message: string, topicRes: string) {
     let handler: Handler
     const messagePromise = new Promise(resolve => {
-      handler = (topic, message) => {
-        resolve(message)
+      handler = (_, payloadString) => {
+        resolve(payloadString)
         this.unsubscribe(topicRes, handler)
       }
       this.subscribe(topicRes, handler)
       this.publish(topic, message)
     })
 
-    const timePromise = new Promise((resolve, reject) => {
+    const timePromise = new Promise((_, reject) => {
       setTimeout(() => {
         // 请求超时后取消订阅
         this.unsubscribe(topicRes, handler)
@@ -164,11 +181,8 @@ class Connection {
   }
 
   private _handleClose = () => {
-    console.log('Lost connection')
     this.fireEvent('onClose')
   }
-
-  private _getClient(): Promise<ClientImplementation> {}
 }
 
 export default Connection
