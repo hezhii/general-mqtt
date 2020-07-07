@@ -1,6 +1,8 @@
 import Client, { ConnectOptions, SubscribeOptions } from './mqtt-client/ClientImplementation'
 import Message, { MqttMessage } from './mqtt-client/Message'
 import ClientImplementation from './mqtt-client/ClientImplementation'
+import customStorage from './CustomStorage'
+import WXWebSocket from './WXWebSocket'
 
 type Handler = (topic: string, payloadString: string) => void
 
@@ -15,7 +17,7 @@ interface ConstructorOptions extends ConnectOptions {
   disconnectedBufferSize?: boolean
   traceFunction?: () => void
 
-  env?: string
+  env?: 'web' | 'wx' | 'rn'
 }
 
 class Connection {
@@ -40,8 +42,14 @@ class Connection {
 
     const { env = 'web' } = options
     let storage = window.localStorage
-    let WebSocketClass = window.WebSocket
-    if (env !== 'web') {
+    let WebSocketClass: any = window.WebSocket
+
+    if (env === 'wx') {
+      storage = customStorage
+      WebSocketClass = WXWebSocket
+    } else if (env === 'rn') {
+      storage = customStorage
+      WebSocketClass = global.WebSocket
     }
     this.client = new ClientImplementation(options.uri, options.clientId, storage, WebSocketClass)
   }
@@ -50,24 +58,30 @@ class Connection {
     this.client.disconnect()
   }
 
-  subscribe(topic: string, callback: Handler, subscribeOptions: SubscribeOptions = { qos: 0 }) {
+  /**
+   * subscribe a topic with handler, the handler will be called when receive the messsage
+   *
+   * @param {string} topic
+   * @param {Function} handler
+   * @param subscribeOptions
+   */
+  subscribe(topic: string, handler: Handler, subscribeOptions: SubscribeOptions = { qos: 0 }) {
     let handlers = this.topicHandlers[topic]
 
     if (!handlers || !handlers.length) {
       this.client.subscribe(topic, subscribeOptions)
       handlers = this.topicHandlers[topic] = []
     }
-    handlers.push(callback)
+    handlers.push(handler)
   }
 
-  // 取消 topic 的某个 handler，如果一个 handler 也没有了，则取消订阅 topic
-  unsubscribe(topic: string, callback: Handler, subscribeOptions: SubscribeOptions = { qos: 0 }) {
+  unsubscribe(topic: string, handler: Handler, subscribeOptions: SubscribeOptions = { qos: 0 }) {
     const handlers = this.topicHandlers[topic]
     if (!handlers) {
       this.client.unsubscribe(topic, subscribeOptions)
       return
     }
-    const index = handlers.indexOf(callback)
+    const index = handlers.indexOf(handler)
     if (index !== -1) {
       handlers.splice(index, 1)
     }
@@ -84,20 +98,12 @@ class Connection {
   }
 
   /**
-   * 发送 Mqtt 请求。
+   * Publish a message to the topic and subscribe to the topic of receiving messages,
+   * the promise will be resolved when got a reply
    *
-   * 1. 订阅结果返回的 Topic，成功后执行下面的步骤
-   * 2. 注册结果返回 Topic 的 handler
-   * 3. 发送消息
-   * 4. 取消订阅
-   * 5. 收到结果过后，handler 中 resolve(data)
-   *
-   * **需要取消订阅**，阿里云 Broker 对 Topic 的订阅数量限制，目前测试下来超过 30 个以后，订阅之后收不到消息。
-   *
-   * @param topic - 发布消息的 topic
-   * @param message - 发送的消息
-   * @param topicRes - 请求结果返回时，接收结果的 topic
-   * @return {Promise<any>}
+   * @param topic
+   * @param message
+   * @param topicRes
    */
   publishWithPromise(topic: string, message: string, topicRes: string) {
     let handler: Handler
@@ -115,7 +121,7 @@ class Connection {
         // 请求超时后取消订阅
         this.unsubscribe(topicRes, handler)
 
-        const err = new Error('请求超时')
+        const err = new Error('Time out')
         err.name = 'TIME_OUT'
         reject(err)
       }, 20000)

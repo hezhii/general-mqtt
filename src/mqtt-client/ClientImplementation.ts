@@ -4,6 +4,7 @@ import { ERROR, MESSAGE_TYPE, CONNACK_RC } from './consts'
 import Message, { MqttMessage } from './Message'
 import Pinger from './Pinger'
 import WireMessage from './WireMessage'
+import WXWebSocket from '../WXWebSocket'
 
 type FailureData = {
   invocationContext: any
@@ -31,7 +32,7 @@ export interface ConnectOptions {
   uris?: string[]
 }
 
-type WebSocketClass = new (url: string, protocols?: string | string[]) => WebSocket
+type WebSocketClass = new (url: string, protocols?: string | string[]) => WebSocket | WXWebSocket
 
 export type SubscribeOptions = {
   onSuccess?: (data: { grantedQos?: number; invocationContext: any }) => void
@@ -47,7 +48,7 @@ class ClientImplementation {
   private connected = false
   private connectOptions: ConnectOptions = { mqttVersion: 4, keepAliveInterval: 60 }
 
-  socket?: WebSocket
+  socket?: WebSocket | WXWebSocket
   uri: string
   clientId: string
   onConnectionLost?: Function
@@ -1059,7 +1060,7 @@ class ClientImplementation {
       this.socket.onmessage = null
       this.socket.onerror = null
       this.socket.onclose = null
-      if (this.socket.readyState === 1) this.socket.close()
+      this.socket.close()
       this.socket = undefined
     }
 
