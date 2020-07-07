@@ -6,9 +6,9 @@ import WXWebSocket from './WXWebSocket'
 type Handler = (topic: string, payloadString: string) => void
 
 const EVENT_TYPES = {
-  connectSuccess: 'connectSuccess',
-  connectFail: 'connectFail',
-  onClose: 'onClose',
+  connected: 'connected',
+  fail: 'fail',
+  closed: 'closed',
 }
 
 interface ConstructorOptions extends ConnectOptions {
@@ -63,10 +63,10 @@ class Connection {
     this.client.connect({
       ...this.options,
       onSuccess: () => {
-        this.fireEvent(EVENT_TYPES.connectSuccess)
+        this.fireEvent(EVENT_TYPES.connected)
       },
       onFailure: () => {
-        this.fireEvent(EVENT_TYPES.connectFail)
+        this.fireEvent(EVENT_TYPES.fail)
         this.connect()
       },
     })
@@ -181,7 +181,7 @@ class Connection {
   }
 
   private _handleClose = () => {
-    this.fireEvent('onClose')
+    this.fireEvent(EVENT_TYPES.closed)
   }
 }
 
