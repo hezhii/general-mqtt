@@ -37,6 +37,11 @@ import { ERROR } from './consts'
  */
 class Message implements MqttMessage {
   payload: Payload
+  private _destinationName: string = ''
+  private _qos: number = 0
+  private _retained: boolean = false
+  private _duplicate: boolean = false
+  private _stringPayload: string | null = null
 
   constructor(newPayload: Payload) {
     if (
@@ -69,29 +74,29 @@ class Message implements MqttMessage {
   }
 
   get destinationName(): string {
-    return this.destinationName
+    return this._destinationName
   }
 
   set destinationName(newDestinationName: string) {
-    if (typeof newDestinationName === 'string') this.destinationName = newDestinationName
+    if (typeof newDestinationName === 'string') this._destinationName = newDestinationName
     else throw new Error(format(ERROR.INVALID_ARGUMENT, [newDestinationName, 'newDestinationName']))
   }
 
   get qos(): number {
-    return this.qos
+    return this._qos
   }
 
   set qos(newQos: number) {
-    if (newQos === 0 || newQos === 1 || newQos === 2) this.qos = newQos
+    if (newQos === 0 || newQos === 1 || newQos === 2) this._qos = newQos
     else throw new Error('Invalid argument:' + newQos)
   }
 
   get retained(): boolean {
-    return this.retained
+    return this._retained
   }
 
   set retained(newRetained: boolean) {
-    if (typeof newRetained === 'boolean') this.retained = newRetained
+    if (typeof newRetained === 'boolean') this._retained = newRetained
     else throw new Error(format(ERROR.INVALID_ARGUMENT, [newRetained, 'newRetained']))
   }
 
@@ -104,19 +109,19 @@ class Message implements MqttMessage {
   }
 
   get duplicate(): boolean {
-    return this.duplicate
+    return this._duplicate
   }
 
   set duplicate(newDuplicate: boolean) {
-    this.duplicate = newDuplicate
+    this._duplicate = newDuplicate
   }
 
   get stringPayload(): string | null {
-    return this.stringPayload
+    return this._stringPayload
   }
 
   set stringPayload(newStringPayload: string | null) {
-    this.stringPayload = newStringPayload
+    this._stringPayload = newStringPayload
   }
 }
 

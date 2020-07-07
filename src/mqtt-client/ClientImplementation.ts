@@ -436,7 +436,11 @@ class ClientImplementation {
   }
 
   publish(topic: string | MqttMessage, payload?: string | Uint8Array, qos?: number, retained?: boolean) {
-    this.send(topic, payload, qos, retained)
+    try {
+      this.send(topic, payload, qos, retained)
+    } catch (err) {
+      this.trace('Client.publish', err.message)
+    }
   }
 
   isConnected(): boolean {
