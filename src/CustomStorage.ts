@@ -64,10 +64,10 @@ const storage = new Proxy(new CustomStorage(), {
   },
 
   get(target, prop) {
-    if (CustomStorage.prototype.hasOwnProperty(name)) {
+    if (CustomStorage.prototype.hasOwnProperty(prop)) {
       return target[prop as string]
     }
-    if (valuesMap.has(name)) {
+    if (valuesMap.has(prop)) {
       return target.getItem(prop as string)
     }
   },
