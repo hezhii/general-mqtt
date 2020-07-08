@@ -1057,7 +1057,7 @@ class ClientImplementation {
       this.socket.onmessage = null
       this.socket.onerror = null
       this.socket.onclose = null
-      this.socket.close()
+      if (this.socket.readyState === 1) this.socket.close()
       this.socket = undefined
     }
 
