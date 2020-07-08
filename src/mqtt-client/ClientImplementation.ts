@@ -133,12 +133,12 @@ class ClientImplementation {
     // Used to determine the transmission sequence of stored sent messages.
     this._sequence = 0
 
-    // Load the local state, if any, from the saved version, only restore state relevant to this client.
-    Object.keys(this.storage).forEach(key => {
-      if (key.indexOf('Sent:' + this._localKey) === 0 || key.indexOf('Received:' + this._localKey) === 0) {
+    for (let i = 0; i < this.storage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && (key.indexOf('Sent:' + this._localKey) === 0 || key.indexOf('Received:' + this._localKey) === 0)) {
         this.restore(key)
       }
-    })
+    }
   }
 
   private _formatConnectOptions(connectOptions: ConnectOptions) {
