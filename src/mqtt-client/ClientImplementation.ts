@@ -1037,7 +1037,7 @@ class ClientImplementation {
     if (errorCode !== undefined && this._reconnecting) {
       // Continue automatic reconnect process
       this.trace('Client._startReconnectAfter', this._reconnectInterval)
-      this._reconnectTimeout = setTimeout(this._reconnect, this._reconnectInterval * 1000)
+      this._reconnectTimeout = setTimeout(() => this._reconnect, this._reconnectInterval * 1000)
       return
     }
 
