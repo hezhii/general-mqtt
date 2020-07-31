@@ -337,9 +337,8 @@ class ClientImplementation {
     this._schedule_message(wireMessage)
   }
 
-  unsubscribe(filter: string[] | string, unsubscribeOptions: SubscribeOptions) {
+  unsubscribe(filter: string[] | string, unsubscribeOptions: SubscribeOptions = {}) {
     if (typeof filter !== 'string' && filter.constructor !== Array) throw new Error('Invalid argument:' + filter)
-    unsubscribeOptions = unsubscribeOptions || {}
     validate(unsubscribeOptions, {
       invocationContext: 'object',
       onSuccess: 'function',

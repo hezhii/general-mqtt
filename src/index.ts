@@ -94,7 +94,15 @@ class Connection {
     handlers.push(handler)
   }
 
-  unsubscribe(topic: string, handler: Handler, subscribeOptions: SubscribeOptions = {}) {
+  cleanSubscribe() {
+    const topics = Object.keys(this.topicHandlers)
+
+    topics.forEach(topic => {
+      this.client.unsubscribe(topic)
+    })
+  }
+
+  unsubscribe(topic: string, handler: Handler, subscribeOptions?: SubscribeOptions) {
     const handlers = this.topicHandlers[topic]
     if (!handlers) {
       this.client.unsubscribe(topic, subscribeOptions)
