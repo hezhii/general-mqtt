@@ -1,6 +1,6 @@
 {
   "name": "general-mqtt",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A general mqtt client that can be used in Wechat mini program, web, react native.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",

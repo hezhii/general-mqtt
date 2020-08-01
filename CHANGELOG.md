@@ -1,3 +1,9 @@
+## 1.0.4
+
+`2020-08-01`
+
+- fix: unable to subscribe normally after cleansubscribe
+
 ## 1.0.3
 
 `2020-08-01`
