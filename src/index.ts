@@ -131,10 +131,12 @@ class Connection {
    */
   publishWithPromise(topic: string, message: string, topicRes: string) {
     let handler: Handler
+    let timeout: NodeJS.Timeout
     const messagePromise = new Promise(resolve => {
       handler = (_, payloadString) => {
         resolve(payloadString)
         this.unsubscribe(topicRes, handler)
+        clearTimeout(timeout)
       }
       this.subscribe(topicRes, handler, {
         qos: 0,
@@ -145,7 +147,7 @@ class Connection {
     })
 
     const timePromise = new Promise((_, reject) => {
-      setTimeout(() => {
+      timeout = setTimeout(() => {
         // 请求超时后取消订阅
         this.unsubscribe(topicRes, handler)
 
