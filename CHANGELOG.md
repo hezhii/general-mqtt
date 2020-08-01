@@ -1,3 +1,9 @@
+## 1.0.3
+
+`2020-08-01`
+
+- fix: clear timer after receiving response
+
 ## 1.0.2
 
 `2020-08-01`
