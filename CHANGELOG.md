@@ -1,6 +1,12 @@
+## 1.0.2
+
+`2020-08-01`
+
+- fix: send message after successful subscription
+
 ## 1.0.1
 
-`2020年07月31日`
+`2020-07-31`
 
 - support cleanSubscribe
 
