@@ -100,6 +100,8 @@ class Connection {
     topics.forEach(topic => {
       this.client.unsubscribe(topic)
     })
+
+    this.topicHandlers = {}
   }
 
   unsubscribe(topic: string, handler: Handler, subscribeOptions?: SubscribeOptions) {
