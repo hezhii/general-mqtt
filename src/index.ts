@@ -136,8 +136,12 @@ class Connection {
         resolve(payloadString)
         this.unsubscribe(topicRes, handler)
       }
-      this.subscribe(topicRes, handler)
-      this.publish(topic, message)
+      this.subscribe(topicRes, handler, {
+        qos: 0,
+        onSuccess: () => {
+          this.publish(topic, message)
+        },
+      })
     })
 
     const timePromise = new Promise((_, reject) => {
