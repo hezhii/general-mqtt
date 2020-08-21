@@ -1,3 +1,10 @@
+## 1.0.5
+
+`2020-08-21`
+
+- fix: onMessageArrived throw error cause disconnected
+- don't throw INTERNAL_ERROR
+
 ## 1.0.4
 
 `2020-08-01`
