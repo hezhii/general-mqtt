@@ -998,7 +998,17 @@ class ClientImplementation {
 
   private _receiveMessage(wireMessage: WireMessage) {
     if (this.onMessageArrived) {
-      this.onMessageArrived(wireMessage.payloadMessage)
+      try {
+        this.onMessageArrived(wireMessage.payloadMessage)
+      } catch (err) {
+        const errorStack =
+          err.hasOwnProperty('stack') === 'undefined' ? err.stack.toString() : 'No Error Stack Available'
+        this.trace(
+          'Client._receiveMessage',
+          ERROR.EXTERNAL_ERROR.code,
+          format(ERROR.EXTERNAL_ERROR, [err.message, errorStack]),
+        )
+      }
     }
   }
 

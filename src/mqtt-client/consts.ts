@@ -50,6 +50,7 @@ export const ERROR = {
   INVALID_MQTT_MESSAGE_TYPE: { code: 16, text: 'AMQJS0016E Invalid MQTT message type {0}.' },
   MALFORMED_UNICODE: { code: 17, text: 'AMQJS0017E Malformed Unicode string:{0} {1}.' },
   BUFFER_FULL: { code: 18, text: 'AMQJS0018E Message buffer is full, maximum buffer size: {0}.' },
+  EXTERNAL_ERROR: { code: 19, text: 'AMQJS0005E External error. Error Message: {0}, Stack trace: {1}' },
 }
 
 /** CONNACK RC Meaning. */
