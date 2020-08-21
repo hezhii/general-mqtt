@@ -260,8 +260,7 @@ class ClientImplementation {
     const connectOptionsMasked = this._traceMask(connectOptions, 'password')
     this.trace('Client.connect', connectOptionsMasked, this.socket, this.connected)
 
-    if (this.connected) throw new Error(format(ERROR.INVALID_STATE, ['already connected']))
-    if (this.socket) throw new Error(format(ERROR.INVALID_STATE, ['already connected']))
+    if (this.connected || this.socket) return
 
     if (this._reconnecting) {
       // connect() function is called while reconnect is in progress.
@@ -301,7 +300,7 @@ class ClientImplementation {
       throw new Error(format(ERROR.INVALID_ARGUMENT, [subscribeOptions.qos, 'subscribeOptions.qos']))
 
     this.trace('Client.subscribe', filter, subscribeOptions)
-    if (!this.connected) throw new Error(format(ERROR.INVALID_STATE, ['not connected']))
+    if (!this.connected) return
 
     const wireMessage = new WireMessage(MESSAGE_TYPE.SUBSCRIBE)
     wireMessage.topics = filter.constructor === Array ? (filter as string[]) : ([filter] as string[])
@@ -350,7 +349,7 @@ class ClientImplementation {
 
     this.trace('Client.unsubscribe', filter, unsubscribeOptions)
 
-    if (!this.connected) throw new Error(format(ERROR.INVALID_STATE, ['not connected']))
+    if (!this.connected) return
 
     const wireMessage = new WireMessage(MESSAGE_TYPE.UNSUBSCRIBE)
     wireMessage.topics = filter.constructor === Array ? (filter as string[]) : ([filter] as string[])
@@ -432,8 +431,6 @@ class ClientImplementation {
             this._buffered_msg_queue.unshift(wireMessage)
           }
         }
-      } else {
-        throw new Error(format(ERROR.INVALID_STATE, ['not connected']))
       }
     }
   }
@@ -453,7 +450,7 @@ class ClientImplementation {
       this._reconnecting = false
     }
 
-    if (!this.socket) throw new Error(format(ERROR.INVALID_STATE, ['not connecting or connected']))
+    if (!this.socket) return
 
     const wireMessage = new WireMessage(MESSAGE_TYPE.DISCONNECT)
 
