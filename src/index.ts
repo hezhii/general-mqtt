@@ -115,6 +115,7 @@ class Connection {
       handlers.splice(index, 1)
     }
     if (!handlers.length) {
+      delete this.topicHandlers[topic]
       this.client.unsubscribe(topic, subscribeOptions)
     }
   }
