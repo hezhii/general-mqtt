@@ -1,6 +1,7 @@
 type Callback = (data: any) => void
 
 class WXWebSocket {
+  private socketTask: WechatMiniprogram.SocketTask
   readyState: number = 3
   binaryType: string | null | undefined
   onopen: Callback | null = null
@@ -13,14 +14,14 @@ class WXWebSocket {
     }
 
     this.readyState = 0
-    wx.connectSocket({
+    const socketTask = (this.socketTask = wx.connectSocket({
       url,
       protocols,
-    })
+    }))
 
-    wx.onSocketOpen(this.onSocketOpen)
-    wx.onSocketClose(this.onSocketClose)
-    wx.onSocketError(this.onSocketError)
+    socketTask.onOpen(this.onSocketOpen)
+    socketTask.onClose(this.onSocketClose)
+    socketTask.onError(this.onSocketError)
   }
 
   onSocketOpen = (data: any) => {
@@ -40,18 +41,18 @@ class WXWebSocket {
 
   close(code?: number, reason?: string): void {
     this.readyState = 2
-    wx.closeSocket({
+    this.socketTask.close({
       code,
       reason,
     })
   }
 
   set onmessage(callback: Callback) {
-    wx.onSocketMessage(callback)
+    this.socketTask.onMessage(callback)
   }
 
   send(data: string | ArrayBuffer) {
-    wx.sendSocketMessage({ data })
+    this.socketTask.send({ data })
   }
 }
 
