@@ -1,3 +1,9 @@
+## 1.0.8
+
+`2020-10-19`
+
+- fix: can't create multiple connections in wechat mini program
+
 ## 1.0.7
 
 `2020-09-11`
