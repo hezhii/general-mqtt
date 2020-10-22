@@ -17,6 +17,7 @@ export interface ConnectOptions {
   password?: string
   willMessage?: MqttMessage
   keepAliveInterval?: number
+  maxReconnectTimeInterval?: number
   cleanSession?: boolean
   useSSL?: boolean
   invocationContext?: unknown
@@ -47,7 +48,7 @@ class ClientImplementation {
   private storage: Storage
   private webSocket: WebSocketClass
   private connected = false
-  private connectOptions: ConnectOptions = { mqttVersion: 4, keepAliveInterval: 60 }
+  private connectOptions: ConnectOptions = { mqttVersion: 4, keepAliveInterval: 60, maxReconnectTimeInterval: 128 }
 
   socket?: WebSocket | WXWebSocket
   uri: string
@@ -149,6 +150,7 @@ class ClientImplementation {
       password: 'string',
       willMessage: 'object',
       keepAliveInterval: 'number',
+      maxReconnectTimeInterval: 'number',
       cleanSession: 'boolean',
       useSSL: 'boolean',
       invocationContext: 'object',
@@ -1020,7 +1022,8 @@ class ClientImplementation {
       if (this.sendPinger) {
         this.sendPinger.cancel()
       }
-      if (this._reconnectInterval < 128) this._reconnectInterval = this._reconnectInterval * 2
+      if (this._reconnectInterval < (this.connectOptions.maxReconnectTimeInterval as number))
+        this._reconnectInterval = this._reconnectInterval * 2
       if (this.connectOptions.uris) {
         this.hostIndex = 0
         this._doConnect(this.connectOptions.uris[0])
