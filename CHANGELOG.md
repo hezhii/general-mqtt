@@ -1,3 +1,9 @@
+## 1.0.10
+
+`2020-10-22`
+
+- set default maxReconnectTimeInterval
+
 ## 1.0.9
 
 `2020-10-22`
