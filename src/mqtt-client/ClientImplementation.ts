@@ -169,6 +169,9 @@ class ClientImplementation {
     // If no keep alive timeout is set, assume 5 seconds.
     if (connectOptions.timeout === undefined) connectOptions.timeout = 10
 
+    // If no maxReconnectTimeInterval is set, assume 128.
+    if (connectOptions.maxReconnectTimeInterval === undefined) connectOptions.maxReconnectTimeInterval = 128
+
     if (connectOptions.mqttVersion === undefined) {
       connectOptions.mqttVersionExplicit = false
       connectOptions.mqttVersion = 4
