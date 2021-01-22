@@ -1,5 +1,5 @@
 import ClientImplementation, { ConnectOptions, SubscribeOptions } from './mqtt-client/ClientImplementation'
-import Message, { MqttMessage } from './mqtt-client/Message'
+import { MqttMessage } from './mqtt-client/Message'
 import customStorage from './CustomStorage'
 import WXWebSocket from './WXWebSocket'
 
@@ -19,13 +19,9 @@ class Connection {
   private topicHandlers: {
     [topic: string]: Handler[]
   }
-  private eventListeners: {
-    [eventName: string]: ((data: any) => void)[]
-  }
 
   constructor(options: ConstructorOptions) {
     this.topicHandlers = {}
-    this.eventListeners = {}
 
     const { env = 'web' } = options
     let storage
@@ -161,34 +157,6 @@ class Connection {
     })
 
     return Promise.race([messagePromise, timePromise])
-  }
-
-  addEventListener(eventName: string, callback: (data: any) => void) {
-    let listeners = this.eventListeners[eventName]
-
-    if (!listeners) {
-      listeners = this.eventListeners[eventName] = []
-    }
-
-    listeners.push(callback)
-  }
-
-  removeEventListener(eventName: string, callback: (data: any) => void) {
-    const listeners = this.eventListeners[eventName]
-
-    if (!listeners) {
-      return
-    }
-
-    const index = listeners.indexOf(callback)
-
-    if (index !== -1) {
-      listeners.splice(index, 1)
-    }
-  }
-
-  fireEvent(eventName: string, data?: any) {
-    ;(this.eventListeners[eventName] || []).forEach(callback => callback(data))
   }
 
   private _handleMessage = (payload: MqttMessage) => {
