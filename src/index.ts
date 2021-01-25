@@ -8,6 +8,7 @@ type Handler = (topic: string, payloadString: string) => void
 interface ConstructorOptions {
   uri: string
   clientId: string
+  autoResubscribe?: boolean // if or not re-subscribe after reconnection
   env?: 'web' | 'wx' | 'rn'
 }
 
@@ -15,13 +16,20 @@ type CallbackFunction = (data: any) => void
 
 class Connection {
   client: ClientImplementation
+  options: ConstructorOptions
+  onConnected: null | ((reconnect: boolean, uri: string | null) => void)
 
   private topicHandlers: {
-    [topic: string]: Handler[]
+    [topic: string]: {
+      subscribeOptions: SubscribeOptions
+      handlers: Handler[]
+    }
   }
 
   constructor(options: ConstructorOptions) {
+    this.options = options
     this.topicHandlers = {}
+    this.onConnected = null
 
     const { env = 'web' } = options
     let storage
@@ -39,6 +47,7 @@ class Connection {
     }
     this.client = new ClientImplementation(options.uri, options.clientId, storage, WebSocketClass)
     this.client.onMessageArrived = this._handleMessage
+    this.client.onConnected = this._handleConnected
   }
 
   set onConnectionLost(callback: CallbackFunction) {
@@ -47,10 +56,6 @@ class Connection {
 
   set onMessageDelivered(callback: CallbackFunction) {
     this.client.onMessageDelivered = callback
-  }
-
-  set onConnected(callback: CallbackFunction) {
-    this.client.onConnected = callback
   }
 
   set disconnectedPublishing(disconnectedPublishing: boolean) {
@@ -81,13 +86,16 @@ class Connection {
    * @param subscribeOptions
    */
   subscribe(topic: string, handler: Handler, subscribeOptions: SubscribeOptions = { qos: 0 }) {
-    let handlers = this.topicHandlers[topic]
+    let topicHandler = this.topicHandlers[topic]
 
-    if (!handlers || !handlers.length) {
+    if (!topicHandler) {
       this.client.subscribe(topic, subscribeOptions)
-      handlers = this.topicHandlers[topic] = []
+      topicHandler = this.topicHandlers[topic] = {
+        handlers: [],
+        subscribeOptions,
+      }
     }
-    handlers.push(handler)
+    topicHandler.handlers.push(handler)
   }
 
   cleanSubscribe() {
@@ -101,8 +109,9 @@ class Connection {
   }
 
   unsubscribe(topic: string, handler: Handler, subscribeOptions?: SubscribeOptions) {
-    const handlers = this.topicHandlers[topic]
-    if (!handlers) {
+    const topicHandler = this.topicHandlers[topic]
+    const handlers = topicHandler && topicHandler.handlers
+    if (!handlers || !handlers.length) {
       this.client.unsubscribe(topic, subscribeOptions)
       return
     }
@@ -161,7 +170,23 @@ class Connection {
 
   private _handleMessage = (payload: MqttMessage) => {
     const { destinationName: resTopic, payloadString } = payload
-    ;(this.topicHandlers[resTopic] || []).forEach(callback => callback(resTopic, payloadString))
+
+    const handlers = this.topicHandlers[resTopic] && this.topicHandlers[resTopic].handlers
+    if (handlers && handlers.length) {
+      handlers.forEach(callback => callback(resTopic, payloadString))
+    }
+  }
+
+  private _handleConnected = (reconnect: boolean, uri: string | null) => {
+    if (this.options.autoResubscribe && reconnect) {
+      // re-subscribe after reconnected
+      Object.entries(this.topicHandlers).forEach(([topic, { subscribeOptions }]) => {
+        this.client.subscribe(topic, subscribeOptions)
+      })
+    }
+    if (this.onConnected) {
+      this.onConnected(reconnect, uri)
+    }
   }
 }
 
