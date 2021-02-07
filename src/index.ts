@@ -1,5 +1,5 @@
 import ClientImplementation, { ConnectOptions, SubscribeOptions } from './mqtt-client/ClientImplementation'
-import { MqttMessage } from './mqtt-client/Message'
+import Message, { MqttMessage } from './mqtt-client/Message'
 import customStorage from './CustomStorage'
 import WXWebSocket from './WXWebSocket'
 
@@ -189,5 +189,7 @@ class Connection {
     }
   }
 }
+
+export { Message }
 
 export default Connection
