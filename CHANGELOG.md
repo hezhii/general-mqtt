@@ -1,3 +1,9 @@
+## 1.1.0
+
+`2021-07-30`
+
+- feat: add ConnectionManager, support async singleton
+
 ## 1.0.12
 
 `2021-02-07`
