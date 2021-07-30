@@ -1,4 +1,4 @@
-export function delay(delay: number = 5000, fn = () => {}, context = null) {
+export function delayExec(delay: number = 5000, fn = () => Promise.resolve(), context = null) {
   let ticket: NodeJS.Timeout
   return {
     run(...args: any) {
@@ -19,9 +19,7 @@ export function delay(delay: number = 5000, fn = () => {}, context = null) {
   }
 }
 
-interface AVFunction<T = unknown> {
-  (value: T): void
-}
+type AVFunction<T = unknown> = (value: T) => void
 
 export function asyncFactory<R = unknown, RE = unknown>(fn: (...args: any) => Promise<R>, timeout: number = 5 * 1000) {
   let requests: { reject: AVFunction<RE>; resolve: AVFunction<R> }[] = []
@@ -51,7 +49,7 @@ export function asyncFactory<R = unknown, RE = unknown>(fn: (...args: any) => Pr
         reject,
       })
 
-      const { run, cancel } = delay(timeout)
+      const { run, cancel } = delayExec(timeout)
 
       run().then(() => {
         const error = new Error('操作超时')

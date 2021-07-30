@@ -24,7 +24,7 @@ class ConnectionManager {
       })
 
       if (debug) {
-        mqttConnection.traceFunction = data => console.log('%cgeneral-mqtt', 'color:#faad14', data)
+        mqttConnection.traceFunction = data => console.debug('%cgeneral-mqtt', 'color:#faad14', data)
       }
 
       mqttConnection.onConnected = () => {

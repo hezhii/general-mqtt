@@ -7,6 +7,7 @@
     "variable-name": false,
     "prefer-for-of": false,
     "forin": false,
-    "no-bitwise": false
+    "no-bitwise": false,
+    "no-console": false
   }
 }
