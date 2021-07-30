@@ -3,7 +3,7 @@ import Connection, { ConstructorOptions } from './Connection'
 import { asyncFactory } from './utils'
 
 type InitOptions = {
-  debug: boolean
+  debug?: boolean
 }
 
 class ConnectionManager {
