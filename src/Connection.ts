@@ -18,6 +18,7 @@ class Connection {
   client: ClientImplementation
   options: ConstructorOptions
   onConnected: null | ((reconnect: boolean, uri: string | null) => void)
+  onConnectionLost: null | CallbackFunction
 
   private topicHandlers: {
     [topic: string]: {
@@ -30,6 +31,7 @@ class Connection {
     this.options = options
     this.topicHandlers = {}
     this.onConnected = null
+    this.onConnectionLost = null
 
     const { env = 'web' } = options
     let storage
@@ -48,10 +50,7 @@ class Connection {
     this.client = new ClientImplementation(options.uri, options.clientId, storage, WebSocketClass)
     this.client.onMessageArrived = this._handleMessage
     this.client.onConnected = this._handleConnected
-  }
-
-  set onConnectionLost(callback: CallbackFunction) {
-    this.client.onConnectionLost = callback
+    this.client.onConnectionLost = this._handleConnectionLost
   }
 
   set onMessageDelivered(callback: CallbackFunction) {
@@ -98,6 +97,8 @@ class Connection {
     topicHandler.handlers.push(handler)
   }
 
+  // fix：cannot subscribe after reconnection
+  // clean all subscribed topics and topicHandlers
   cleanSubscribe() {
     const topics = Object.keys(this.topicHandlers)
 
@@ -186,6 +187,16 @@ class Connection {
     }
     if (this.onConnected) {
       this.onConnected(reconnect, uri)
+    }
+  }
+
+  private _handleConnectionLost = (data: any) => {
+    // if not autoResubscribe, rest topicHandlers to fix subscribe failed
+    if (!this.options.autoResubscribe) {
+      this.topicHandlers = {}
+    }
+    if (this.onConnectionLost) {
+      this.onConnectionLost(data)
     }
   }
 }
