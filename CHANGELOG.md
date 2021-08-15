@@ -1,3 +1,9 @@
+## 1.1.1
+
+`2021-08-15`
+
+- fix：cannot subscribe after reconnection
+
 ## 1.1.0
 
 `2021-07-30`
