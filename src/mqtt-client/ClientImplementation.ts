@@ -263,7 +263,7 @@ class ClientImplementation {
 
     // do connect
     const connectOptionsMasked = this._traceMask(connectOptions, 'password')
-    this.trace('Client.connect', connectOptionsMasked, this.socket, this.connected)
+    this.trace('Client.connect', connectOptionsMasked, this.connected)
 
     if (this.connected || this.socket) return
 
@@ -495,7 +495,9 @@ class ClientImplementation {
     // Pass trace message back to client's callback function
     const traceFunction = this.traceFunction
     if (traceFunction) {
-      traceFunction({ severity: 'Debug', message: args.map((a: any) => JSON.stringify(a)).join('') })
+      try {
+        traceFunction({ severity: 'Debug', message: args.map((a: any) => JSON.stringify(a)).join('') })
+      } catch (err) {}
     }
 
     // buffer style trace
