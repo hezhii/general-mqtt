@@ -497,7 +497,9 @@ class ClientImplementation {
     if (traceFunction) {
       try {
         traceFunction({ severity: 'Debug', message: args.map((a: any) => JSON.stringify(a)).join('') })
-      } catch (err) {}
+      } catch (err) {
+        //
+      }
     }
 
     // buffer style trace
