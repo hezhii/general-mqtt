@@ -172,7 +172,11 @@ class Connection {
   private _handleMessage = (payload: MqttMessage) => {
     const { destinationName: resTopic, payloadString } = payload
 
-    const handlers = this.topicHandlers[resTopic] && this.topicHandlers[resTopic].handlers
+    // handle broker add "/" after resTopic
+    const trimedTopic = resTopic.replace(/\/$/, '')
+    const handlers =
+      (this.topicHandlers[resTopic] && this.topicHandlers[resTopic].handlers) ||
+      (this.topicHandlers[trimedTopic] && this.topicHandlers[trimedTopic].handlers)
     if (handlers && handlers.length) {
       handlers.forEach(callback => callback(resTopic, payloadString))
     }
