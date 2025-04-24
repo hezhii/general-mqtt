@@ -5,7 +5,7 @@ import Pinger from './Pinger'
 import WireMessage from './WireMessage'
 import WXWebSocket from '../WXWebSocket'
 
-type FailureData = {
+export type FailureData = {
   invocationContext: any
   errorCode: number
   errorMessage?: string

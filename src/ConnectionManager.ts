@@ -1,9 +1,11 @@
-import { ConnectOptions } from './mqtt-client/ClientImplementation'
+import { ConnectOptions, FailureData } from './mqtt-client/ClientImplementation'
 import Connection, { ConstructorOptions } from './Connection'
 import { asyncFactory } from './utils'
 
 type InitOptions = {
   debug?: boolean
+  onConnectFailure?: (err: FailureData) => void // 初次连接失败时上报事件
+  firstConnectRetry?: boolean // 第一次连接失败时无限重试
 }
 
 class ConnectionManager {
@@ -15,7 +17,16 @@ class ConnectionManager {
 
   private static initConnection(): Promise<Connection> {
     return new Promise((resolve, reject) => {
-      const { uri, clientId, autoResubscribe, env, debug, ...reset } = ConnectionManager.connectOptions
+      const {
+        uri,
+        clientId,
+        autoResubscribe,
+        env,
+        debug,
+        onConnectFailure,
+        firstConnectRetry,
+        ...reset
+      } = ConnectionManager.connectOptions
       const mqttConnection = new Connection({
         uri,
         clientId,
@@ -31,16 +42,25 @@ class ConnectionManager {
         resolve(mqttConnection)
       }
 
-      mqttConnection.connect({
-        ...reset,
-        onFailure: err => {
-          reject(err)
-        },
-      })
+      const doConnect = () => {
+        mqttConnection.connect({
+          ...reset,
+          onFailure: err => {
+            onConnectFailure && onConnectFailure(err)
+            if (firstConnectRetry) {
+              doConnect()
+            } else {
+              reject(err)
+            }
+          },
+        })
+      }
+
+      doConnect()
     })
   }
 
-  private static asyncInitiator = asyncFactory(ConnectionManager.initConnection, 30 * 1000)
+  private static asyncInitiator = asyncFactory(ConnectionManager.initConnection)
 
   static sharedInstance() {
     return this.asyncInitiator(this.connectOptions)

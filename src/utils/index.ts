@@ -21,7 +21,7 @@ export function delayExec(delay: number = 5000, fn = () => Promise.resolve(), co
 
 type AVFunction<T = unknown> = (value: T) => void
 
-export function asyncFactory<R = unknown, RE = unknown>(fn: (...args: any) => Promise<R>, timeout: number = 5 * 1000) {
+export function asyncFactory<R = unknown, RE = unknown>(fn: (...args: any) => Promise<R>, timeout?: number) {
   let requests: { reject: AVFunction<RE>; resolve: AVFunction<R> }[] = []
   let instance: R
   let initializing = false
@@ -49,24 +49,28 @@ export function asyncFactory<R = unknown, RE = unknown>(fn: (...args: any) => Pr
         reject,
       })
 
-      const { run, cancel } = delayExec(timeout)
+      let cancle: () => void
+      if (timeout) {
+        const delayExecResult = delayExec(timeout)
+        cancle = delayExecResult.cancel
 
-      run().then(() => {
-        const error = new Error('操作超时')
-        processRequests('reject', error)
-      })
+        delayExecResult.run().then(() => {
+          const error = new Error('操作超时')
+          processRequests('reject', error)
+        })
+      }
 
       fn.apply(context, args)
         .then(res => {
           // 初始化成功
-          cancel()
+          cancle && cancle()
           instance = res
           initializing = false
           processRequests('resolve', instance)
         })
         .catch(error => {
           // 初始化失败
-          cancel()
+          cancle && cancle()
           initializing = false
           processRequests('reject', error)
         })
