@@ -1,6 +1,6 @@
 import { ConnectOptions, FailureData } from './mqtt-client/ClientImplementation'
 import Connection, { ConstructorOptions } from './Connection'
-import { asyncFactory } from './utils'
+import { asyncFactory, sleep } from './utils'
 
 type InitOptions = {
   debug?: boolean
@@ -45,9 +45,10 @@ class ConnectionManager {
       const doConnect = () => {
         mqttConnection.connect({
           ...reset,
-          onFailure: err => {
+          onFailure: async err => {
             onConnectFailure && onConnectFailure(err)
             if (firstConnectRetry) {
+              await sleep(3000)
               doConnect()
             } else {
               reject(err)

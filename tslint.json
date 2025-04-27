@@ -1,13 +1,11 @@
 {
-  "extends": [
-    "tslint:recommended",
-    "tslint-config-prettier"
-  ],
+  "extends": ["tslint:recommended", "tslint-config-prettier"],
   "rules": {
     "variable-name": false,
     "prefer-for-of": false,
     "forin": false,
     "no-bitwise": false,
-    "no-console": false
+    "no-console": false,
+    "no-unused-expression": false
   }
 }

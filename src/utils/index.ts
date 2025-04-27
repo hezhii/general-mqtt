@@ -86,3 +86,7 @@ export function asyncFactory<R = unknown, RE = unknown>(fn: (...args: any) => Pr
     requests = []
   }
 }
+
+export const sleep = (ms: number) => {
+  return new Promise(resolve => setTimeout(resolve as any, ms))
+}
