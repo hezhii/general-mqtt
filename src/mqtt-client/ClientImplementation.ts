@@ -717,7 +717,7 @@ class ClientImplementation {
         this.receiveBuffer = byteArray.subarray(offset)
       }
       return messages
-    } catch (error) {
+    } catch (error:any) {
       const errorStack =
         error.hasOwnProperty('stack') === 'undefined' ? error.stack.toString() : 'No Error Stack Available'
       this._disconnected(ERROR.INTERNAL_ERROR.code, format(ERROR.INTERNAL_ERROR, [error.message, errorStack]))
@@ -939,7 +939,7 @@ class ClientImplementation {
             format(ERROR.INVALID_MQTT_MESSAGE_TYPE, [wireMessage.type]),
           )
       }
-    } catch (error) {
+    } catch (error:any) {
       const errorStack =
         error.hasOwnProperty('stack') === 'undefined' ? error.stack.toString() : 'No Error Stack Available'
       this._disconnected(ERROR.INTERNAL_ERROR.code, format(ERROR.INTERNAL_ERROR, [error.message, errorStack]))
@@ -1006,7 +1006,7 @@ class ClientImplementation {
     if (this.onMessageArrived) {
       try {
         this.onMessageArrived(wireMessage.payloadMessage)
-      } catch (err) {
+      } catch (err:any) {
         const errorStack =
           err.hasOwnProperty('stack') === 'undefined' ? err.stack.toString() : 'No Error Stack Available'
         this.trace(
